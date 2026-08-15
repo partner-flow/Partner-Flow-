@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Partner Flow</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f7f3ff;color:#211b2d}
+button,input,select,textarea{font:inherit}
+button{border:0;cursor:pointer}
+.screen{display:none;min-height:100vh}
+.screen.active{display:block}
+.wrap{width:min(94%,900px);margin:auto}
+.logo{font-size:30px;font-weight:800;color:#713cff}
+.muted{color:#777}
+.card{background:#fff;border-radius:20px;padding:18px;margin:14px 0;box-shadow:0 5px 22px #0001}
+.primary{background:#713cff;color:#fff;padding:14px 18px;border-radius:13px;font-weight:700}
+.secondary{background:#eee9f8;padding:12px 16px;border-radius:13px}
+input,select,textarea{width:100%;padding:14px;margin:7px 0;border:1px solid #ddd4e9;border-radius:13px;background:#fff}
+.top{display:flex;align-items:center;gap:12px;padding:18px 0}
+.back{background:#fff;border-radius:12px;padding:10px 14px}
+.hero{background:linear-gradient(135deg,#713cff,#9b72ff);color:white;padding:24px;border-radius:24px;margin:16px 0}
+.hero .primary{background:#fff;color:#713cff}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.service{background:#fff;border-radius:18px;padding:16px;box-shadow:0 4px 18px #0001}
+.icon{font-size:30px}
+.price{font-weight:800;color:#713cff}
+.badge{font-size:12px;background:#e8faee;color:#16833d;padding:5px 8px;border-radius:20px}
+.actions{display:flex;gap:8px;margin-top:12px}
+.actions>*{flex:1}
+.nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #eee;display:flex;justify-content:space-around;padding:7px;z-index:999}
+.nav button{background:none;font-size:12px}
+.nav span{display:block;font-size:20px}
+.space{height:90px}
+@media(max-width:600px){.grid{grid-template-columns:1fr 1fr}.logo{font-size:26px}}
+</style>
+
+
+<style>
+:root{
+--bg:#fff5f8;
+--card:#ffffff;
+--pink:#e83e78;
+--pink2:#ff6f9f;
+--dark:#321824;
+--text:#291a21;
+--muted:#806c74;
+}
+
+body{
+background:linear-gradient(135deg,#fff8fa,#fde8ef)!important;
+color:var(--text)!important;
+}
+
+.logo{
+color:#d82f6b!important;
+font-weight:900;
+letter-spacing:.6px;
+}
+
+.card,.service{
+background:#ffffff!important;
+border:1px solid #f3d5df!important;
+box-shadow:0 8px 25px rgba(190,45,95,.10)!important;
+border-radius:18px!important;
+}
+
+.hero{
+background:linear-gradient(135deg,#d82f6b,#f05b8c)!important;
+color:#fff!important;
+border:none!important;
+border-radius:22px!important;
+box-shadow:0 12px 30px rgba(216,47,107,.22)!important;
+}
+
+.hero h1,.hero h2,.hero h3,.hero p{
+color:#fff!important;
+}
+
+button.primary{
+background:linear-gradient(135deg,#e83e78,#ff6f9f)!important;
+color:#fff!important;
+font-weight:800!important;
+border:none!important;
+box-shadow:0 6px 18px rgba(232,62,120,.24)!important;
+}
+
+button.secondary{
+background:#fff!important;
+color:#d82f6b!important;
+border:1px solid #f0c8d5!important;
+}
+
+input,select,textarea{
+background:#fff!important;
+color:#291a21!important;
+border:1px solid #edced9!important;
+border-radius:12px!important;
+}
+
+input::placeholder,textarea::placeholder{
+color:#9b858d!important;
+}
+
+.price{
+color:#d12d67!important;
+font-weight:900;
+}
+
+.badge{
+background:#fff0f5!important;
+color:#d12d67!important;
+border:1px solid #f2cad8!important;
+}
+
+.nav{
+background:rgba(255,255,255,.98)!important;
+border-top:1px solid #f0d5df!important;
+box-shadow:0 -5px 20px rgba(190,45,95,.08)!important;
+backdrop-filter:blur(12px);
+}
+
+.nav button{
+color:#806c74!important;
+}
+
+.nav button:hover{
+color:#e83e78!important;
+}
+
+h1,h2,h3{
+color:#291a21;
+}
+
+.muted{
+color:#806c74!important;
+}
+</style>
+</head>
+<body>
+
+<section id="login" class="screen active">
+<div class="wrap">
+<div class="top"><div class="logo">Partner Flow</div></div>
+<div class="hero">
+<h1>Find the right partner.</h1>
+<p>Connect with trusted people for activities, assistance and companionship.</p>
+<button class="primary" onclick="go('loginForm')">Login / Sign Up</button>
+</div>
+<div class="card">
+<h3>Why Partner Flow?</h3>
+<p>⭐ Trusted profiles</p>
+<p>📍 Nearby partners</p>
+<p>🔒 Simple booking</p>
+</div>
+</div>
+</section>
+
+<section id="loginForm" class="screen">
+<div class="wrap">
+<div class="top"><div class="logo">Partner Flow</div></div>
+<div class="card">
+<h2>Login / Sign Up</h2>
+<p class="muted">Enter your mobile number to continue.</p>
+<input id="loginMobile" type="tel" maxlength="10" placeholder="10-digit mobile number">
+<button class="primary" style="width:100%" onclick="sendOTP()">Send OTP</button>
+<div id="otpBox" style="display:none;margin-top:12px;">
+<input id="loginOTP" maxlength="6" placeholder="Enter OTP">
+<p class="muted">Demo OTP: <b id="demoOTP"></b></p>
+<button class="primary" style="width:100%" onclick="verifyOTP()">Verify OTP</button>
+</div>
+</div>
+</div>
+</section>
+
+<section id="profile" class="screen">
+<div class="wrap">
+<div class="top"><div class="logo">Create Profile</div></div>
+<div class="card">
+<input id="name" placeholder="Your name">
+<input id="city" placeholder="Your city">
+<input id="age" type="number" placeholder="Age">
+<input id="language" placeholder="Preferred language">
+<textarea id="about" placeholder="About you"></textarea>
+<button class="primary" style="width:100%" onclick="saveProfile()">Continue</button>
+</div>
+</div>
+</section>
+
+<section id="home" class="screen">
+<div class="wrap space">
+
+<div class="top row">
+<div>
+<div class="logo">Partner Flow</div>
+<div class="muted">Welcome, <b id="welcome"></b> 👋</div>
+</div>
+<button class="secondary" onclick="go('profileView')">👤</button>
+</div>
+
+<div class="hero">
+<span class="badge">🟢 Partner Flows available near you</span>
+<h2>What do you need today?</h2>
+<p>Find the right partner for your time, activity or assistance.</p>
+<button class="primary" style="width:100%" onclick="go('find')">
+🔎 Find a Partner Flow
+</button>
+</div>
+
+<div class="row">
+<h2>Popular Services</h2>
+<button class="secondary" onclick="go('find')">View All</button>
+</div>
+
+<div id="popular" class="grid"></div>
+
+<div class="card">
+<h3>Why use Partner Flow?</h3>
+<p>⭐ Trusted profiles</p>
+<p>📍 Partner Flows near your location</p>
+<p>📅 Easy booking</p>
+<p>💰 Secure wallet system</p>
+</div>
+
+</div>
+</section>
+
+<section id="find" class="screen">
+<div class="wrap space">
+<div class="top">
+<button class="back" onclick="go('home')">←</button>
+<div><h2 style="margin:0">Find a Partner Flow</h2><span class="muted">Trusted partners near you</span></div>
+</div>
+<input id="search" placeholder="🔎 Search partner or service" oninput="render()">
+<select id="category" onchange="render()">
+<option value="all">All Services</option>
+<option value="movie">Movie</option>
+<option value="meeting">Meeting</option>
+<option value="elder">Elder Care</option>
+<option value="shopping">Shopping</option>
+<option value="travel">Travel</option>
+<option value="home">Home Help</option>
+<option value="driver">Driver</option>
+<option value="clubbing">Clubbing</option>
+<option value="event">Events</option>
+<option value="coffee">Coffee & Chat</option>
+<option value="medical">Medical</option>
+<option value="fitness">Fitness</option>
+<option value="study">Study</option>
+<option value="language">Language</option>
+<option value="photography">Photography</option>
+<option value="gaming">Gaming</option>
+<option value="citytour">City Tour</option>
+<option value="business">Business</option>
+<option value="tech">Tech Help</option>
+<option value="errand">Errands</option>
+</select>
+
+<select id="distance" onchange="render()">
+<option value="5">Within 5 km</option>
+<option value="20" selected>Within 20 km</option>
+<option value="30">Within 30 km</option>
+<option value="50">Within 50 km</option>
+</select>
+<div class="row"><h3>Partner Flows near you</h3><span id="count" class="muted"></span></div>
+<div id="list"></div>
+</div>
+</section>
+
+
+<section id="details" class="screen">
+<div class="wrap">
+<div class="top">
+<button class="back" onclick="go('find')">←</button>
+<h2>Partner Flow Details</h2>
+</div>
+<div id="detailsBox"></div>
+</div>
+</section>
+
+<section id="bookings" class="screen">
+<div class="wrap space">
+<div class="top">
+<button class="back" onclick="go('home')">←</button>
+<div class="logo">My Bookings</div>
+</div>
+<div id="bookingList"></div>
+</div>
+</section>
+
+<section id="favourites" class="screen">
+<div class="wrap space">
+<div class="top"><div class="logo">Favourites ❤️</div></div>
+<div id="favList"></div>
+</div>
+</section>
+
+<section id="wallet" class="screen">
+<div class="wrap space">
+<div class="top">
+<button class="back" onclick="go('home')">←</button>
+<div class="logo">My Wallet</div>
+</div>
+
+<div class="hero">
+<p>Available Balance</p>
+<h1 id="walletBalance">₹0</h1>
+<button class="primary" onclick="addMoney()">➕ Add Money</button>
+</div>
+
+<div class="card">
+<h3>Transaction History</h3>
+<div id="transactionList">
+<p class="muted">No transactions yet.</p>
+</div>
+</div>
+
+</div>
+</section>
+
+<section id="profileView" class="screen">
+<div class="wrap space">
+
+<div class="top">
+<button class="back" onclick="go('home')">←</button>
+<div class="logo">My Profile</div>
+</div>
+
+<div class="card" style="text-align:center">
+<div style="font-size:64px">👤</div>
+<h2 id="pname">Your Name</h2>
+<p>📍 <span id="pcity">Your City</span></p>
+</div>
+
+<div class="card">
+<h3>Personal Information</h3>
+<p>🎂 Age: <strong id="page">Not added</strong></p>
+<p>🗣️ Language: <strong id="plang">Not added</strong></p>
+<p>📝 About: <span id="pabout">No description added.</span></p>
+</div>
+
+<div class="card">
+<button class="primary" style="width:100%" onclick="go('profile')">
+✏️ Edit Profile
+</button>
+
+<button class="secondary" style="width:100%;margin-top:10px"
+onclick="logout()">
+🚪 Logout
+</button>
+</div>
+
+</div>
+</section>
+
+<script>
+const services=[
+["Movie Partner Flow","movie","🎬","Watch movies and spend time together","₹4,600 / hour"],
+["In-Person Meeting","meeting","🤝","Face-to-face meeting and conversation","₹2,100 / 2 hours"],
+["Elder Care","elder","👴","Senior assistance and daily support","₹1,100 / 2 hours"],
+["Shopping Buddy","shopping","🛍️","Shopping and everyday errands","₹2,100 / hour"],
+["Travel Partner Flow","travel","✈️","Travel company and assistance","₹2,500 / hour"],
+["Home Help","home","🏠","Everyday home assistance","₹1,800 / hour"],
+["Driver Partner Flow","driver","🚗","Driving and travel assistance","₹2,000 / hour"],
+["Clubbing Partner Flow","clubbing","🎉","Nightlife and party assistance","₹4,600 / hour"],
+["Event Partner Flow","event","🎭","Event and party assistance","₹2,100 / hour"],
+["Coffee & Chat","coffee","☕","Friendly conversation and company","₹1,500 / hour"],
+["Medical Support","medical","🩺","Hospital and appointment assistance","₹2,100 / hour"],
+["Fitness Partner Flow","fitness","🏃","Walking, workout and fitness company","₹1,800 / hour"],
+["Study Partner Flow","study","📚","Study sessions and learning company","₹1,500 / hour"],
+["Language Practice","language","🗣️","Practice languages through conversation","₹1,400 / hour"],
+["Photography Partner Flow","photography","📸","Photoshoots and city photography","₹2,500 / hour"],
+["Gaming Partner Flow","gaming","🎮","Gaming sessions and friendly competition","₹1,500 / hour"],
+["City Tour Partner Flow","citytour","🏙️","Explore local places and attractions","₹2,100 / hour"],
+["Business Meeting","business","💼","Professional meeting and networking","₹2,500 / hour"],
+["Tech Help","tech","💻","Computer, phone and technology help","₹1,800 / hour"],
+["Errand Partner Flow","errand","🛒","Everyday errands and small tasks","₹1,500 / hour"]
+];
+
+let bookings=JSON.parse(localStorage.getItem("partnerBookings")||"[]");
+let favourites=JSON.parse(localStorage.getItem("partnerFavourites")||"[]");
+
+function addMoney(){
+const amount=prompt("Enter amount to add:");
+const value=Number(amount);
+
+if(!value||value<=0){
+alert("Please enter a valid amount.");
+return;
+}
+
+let balance=Number(localStorage.getItem("partnerWalletBalance")||0);
+balance+=value;
+
+localStorage.setItem("partnerWalletBalance",String(balance));
+
+let transactions=JSON.parse(localStorage.getItem("partnerTransactions")||"[]");
+transactions.unshift({
+type:"Credit",
+amount:value,
+date:new Date().toLocaleString()
+});
+localStorage.setItem("partnerTransactions",JSON.stringify(transactions));
+
+renderWallet();
+alert("₹"+value+" added to wallet. 💰");
+}
+
+function renderWallet(){
+const balance=Number(localStorage.getItem("partnerWalletBalance")||0);
+const transactions=JSON.parse(localStorage.getItem("partnerTransactions")||"[]");
+
+const b=document.getElementById("walletBalance");
+if(b)b.textContent="₹"+balance.toLocaleString("en-IN");
+
+const box=document.getElementById("transactionList");
+if(!box)return;
+
+if(!transactions.length){
+box.innerHTML='<p class="muted">No transactions yet.</p>';
+return;
+}
+
+box.innerHTML=transactions.map(t=>`
+<div class="row" style="padding:10px 0;border-bottom:1px solid #eee">
+<div>
+<strong>${t.type}</strong>
+<p class="muted" style="margin:3px 0">${t.date}</p>
+</div>
+<strong>₹${Number(t.amount).toLocaleString("en-IN")}</strong>
+</div>`).join("");
+}
+
+function go(id){
+document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+const el=document.getElementById(id);
+if(el)el.classList.add("active");
+if(id==="home")home();
+if(id==="find")render();
+if(id==="bookings")renderBookings();
+if(id==="favourites")renderFavourites();
+if(id==="wallet")renderWallet();
+}
+
+function logout(){
+    localStorage.removeItem("partnerLoggedIn");
+    localStorage.removeItem("partnerOTP");
+    go("loginForm");
+}
+
+function loadSavedProfile(){
+const n=localStorage.getItem("partnerName")||"";
+const c=localStorage.getItem("partnerCity")||"";
+const a=localStorage.getItem("partnerAge")||"";
+const l=localStorage.getItem("partnerLanguage")||"";
+const about=localStorage.getItem("partnerAbout")||"";
+
+const nameInput=document.getElementById("name");
+const cityInput=document.getElementById("city");
+const ageInput=document.getElementById("age");
+const langInput=document.getElementById("language");
+const aboutInput=document.getElementById("about");
+
+if(nameInput)nameInput.value=n;
+if(cityInput)cityInput.value=c;
+if(ageInput)ageInput.value=a;
+if(langInput)langInput.value=l;
+if(aboutInput)aboutInput.value=about;
+
+if(document.getElementById("name")) document.getElementById("name").value=n;
+if(document.getElementById("city")) document.getElementById("city").value=c;
+if(document.getElementById("age")) document.getElementById("age").value=a;
+if(document.getElementById("language")) document.getElementById("language").value=l;
+if(document.getElementById("about")) document.getElementById("about").value=about;
+
+if(document.getElementById("welcome")) document.getElementById("welcome").textContent=n;
+if(document.getElementById("pname")) document.getElementById("pname").textContent=n;
+if(document.getElementById("pcity")) document.getElementById("pcity").textContent=c;
+if(document.getElementById("page")) document.getElementById("page").textContent=a||"Not added";
+if(document.getElementById("plang")) document.getElementById("plang").textContent=l||"Not added";
+if(document.getElementById("pabout")) document.getElementById("pabout").textContent=about||"No description added.";
+}
+
+function saveProfile(){
+const n=document.getElementById("name").value.trim();
+const c=document.getElementById("city").value.trim();
+
+if(!n||!c){
+alert("Please enter your name and city.");
+return;
+}
+
+localStorage.setItem("partnerName",n);
+localStorage.setItem("partnerCity",c);
+localStorage.setItem("partnerAge",document.getElementById("age").value);
+localStorage.setItem("partnerLanguage",document.getElementById("language").value);
+localStorage.setItem("partnerAbout",document.getElementById("about").value);
+
+document.getElementById("welcome").textContent=n;
+document.getElementById("pname").textContent=n;
+document.getElementById("pcity").textContent=c;
+document.getElementById("page").textContent=document.getElementById("age").value||"Not added";
+document.getElementById("plang").textContent=document.getElementById("language").value||"Not added";
+document.getElementById("pabout").textContent=document.getElementById("about").value||"No description added.";
+
+go("home");
+}
+
+function setup(){
+const cat=document.getElementById("category");
+services.forEach(s=>{
+const o=document.createElement("option");
+o.value=s[1];
+o.textContent=s[2]+" "+s[0];
+cat.appendChild(o);
+});
+home();
+}
+
+function home(){
+document.getElementById("popular").innerHTML=services.slice(0,6).map(s=>`
+<div class="service" onclick="details('${s[0]}')" style="cursor:pointer">
+<div class="icon">${s[2]}</div>
+<h3>${s[0]}</h3>
+<p class="muted">${s[3]}</p>
+</div>`).join("");
+}
+
+function render(){
+const q=(document.getElementById("search").value||"").toLowerCase();
+const cat=document.getElementById("category").value;
+const box=document.getElementById("list");
+
+const result=services.filter(s=>
+(cat==="all"||s[1]===cat)&&
+(s[0].toLowerCase().includes(q)||s[3].toLowerCase().includes(q))
+);
+
+document.getElementById("count").textContent=result.length+" services";
+
+if(!result.length){
+box.innerHTML='<div class="card"><h3>No partners found</h3><p class="muted">Try another search.</p></div>';
+return;
+}
+
+box.innerHTML=result.map(s=>{
+const fav=favourites.includes(s[0]);
+return `
+<div class="service card">
+<div class="row">
+<div class="icon">${s[2]}</div>
+<button class="fav" onclick="fav('${s[0]}')">${fav?"❤️":"🤍"}</button>
+</div>
+<h3>${s[0]}</h3>
+<p class="muted">${s[3]}</p>
+<span class="badge">🟢 Available</span>
+<p>⭐ 4.8 &nbsp; 📍 Within 20 km</p>
+<div class="price">${s[4]}</div>
+<div class="actions">
+<button class="secondary" onclick="details('${s[0]}')">Details</button>
+<button class="primary" onclick="book('${s[0]}')">Book</button>
+</div>
+</div>`;
+}).join("");
+}
+
+function details(name){
+const s=services.find(x=>x[0]===name);
+if(!s)return;
+
+const fav=favourites.includes(s[0]);
+
+document.getElementById("detailsBox").innerHTML=`
+<div class="card">
+<div style="font-size:58px;text-align:center">${s[2]}</div>
+
+<h1 style="margin-bottom:6px">${s[0]}</h1>
+<p class="muted">${s[3]}</p>
+
+<div class="row" style="margin:16px 0">
+<span>⭐ 4.8</span>
+<span>🟢 Available</span>
+<span>📍 Within 20 km</span>
+</div>
+
+<div class="price">${s[4]}</div>
+
+<div style="margin:18px 0">
+<h3>About this service</h3>
+<p class="muted">
+Connect with a trusted Partner Flow for this service.
+You can choose your preferred booking date and time.
+</p>
+</div>
+
+<div class="actions">
+<button class="secondary" onclick="fav('${s[0]}')">
+${fav?"❤️ Remove Favourite":"🤍 Add Favourite"}
+</button>
+
+<button class="primary" onclick="book('${s[0]}')">
+📅 Book Now
+</button>
+</div>
+</div>`;
+
+go("details");
+}
+
+function book(name){
+const s=services.find(x=>x[0]===name);
+if(!s)return;
+
+const date=prompt("Booking date (DD/MM/YYYY):");
+if(!date)return;
+
+const parts=date.trim().split("/");
+if(parts.length!==3){
+alert("Please use DD/MM/YYYY format.");
+return;
+}
+
+const day=Number(parts[0]);
+const month=Number(parts[1]);
+const year=Number(parts[2]);
+
+const selected=new Date(year,month-1,day);
+const today=new Date();
+today.setHours(0,0,0,0);
+
+if(
+selected.getFullYear()!==year ||
+selected.getMonth()!==month-1 ||
+selected.getDate()!==day ||
+selected<today
+){
+alert("Please enter a valid future date.");
+return;
+}
+
+const time=prompt("Booking time (e.g. 7:00 PM):");
+if(!time)return;
+
+const bookingId="PF"+Date.now().toString().slice(-8);
+
+if(!confirm(
+"Confirm your booking?\\n\\n"+
+"👤 "+name+"\\n"+
+"📅 "+date+"\\n"+
+"🕐 "+time+"\\n"+
+"💰 "+s[4]
+))return;
+
+bookings.push({
+id:bookingId,
+name:name,
+price:s[4],
+date:date,
+time:time,
+status:"Upcoming",
+createdAt:new Date().toISOString()
+});
+
+localStorage.setItem("partnerBookings",JSON.stringify(bookings));
+
+alert("Booking confirmed! 🎉\\nBooking ID: "+bookingId);
+go("bookings");
+}
+
+function renderBookings(){
+const box=document.getElementById("bookingList");
+
+if(!bookings.length){
+box.innerHTML='<div class="card"><h3>No bookings yet</h3><p class="muted">Your bookings will appear here.</p></div>';
+return;
+}
+
+box.innerHTML=bookings.map((b,i)=>`
+<div class="card">
+<div class="row">
+<h3>${b.name}</h3>
+<span class="badge">${b.status==="Cancelled"?"🔴 Cancelled":"🟢 Upcoming"}</span>
+</div>
+
+<p class="muted">Booking ID: <strong>${b.id||"PF"+i}</strong></p>
+<p>📅 ${b.date}</p>
+<p>🕐 ${b.time||"Time not added"}</p>
+<p class="price">${b.price}</p>
+
+${b.status==="Cancelled"
+?'<p class="muted">This booking was cancelled and the refund was added to your wallet.</p>'
+:'<button class="secondary" onclick="cancelBooking('+i+')">Cancel Booking</button>'}
+
+</div>`).join("");
+}
+
+function cancelBooking(i){
+const b=bookings[i];
+
+if(!b || b.status==="Cancelled")return;
+
+if(!confirm("Cancel this booking?"))return;
+
+bookings[i].status="Cancelled";
+
+const amount=Number(String(b.price).replace(/[^0-9.]/g,""));
+
+if(amount>0){
+let balance=Number(localStorage.getItem("partnerWalletBalance")||0);
+balance+=amount;
+localStorage.setItem("partnerWalletBalance",String(balance));
+
+let transactions=JSON.parse(localStorage.getItem("partnerTransactions")||"[]");
+
+transactions.unshift({
+type:"Refund",
+amount:amount,
+date:new Date().toLocaleString("en-IN")
+});
+
+localStorage.setItem("partnerTransactions",JSON.stringify(transactions));
+}
+
+localStorage.setItem("partnerBookings",JSON.stringify(bookings));
+
+renderBookings();
+alert("Booking cancelled and ₹"+amount.toLocaleString("en-IN")+" refunded to your wallet. 💰");
+}
+
+function fav(name){
+if(favourites.includes(name))
+favourites=favourites.filter(x=>x!==name);
+else
+favourites.push(name);
+
+localStorage.setItem("partnerFavourites",JSON.stringify(favourites));
+render();
+}
+
+function renderFavourites(){
+const box=document.getElementById("favList");
+const list=services.filter(s=>favourites.includes(s[0]));
+
+if(!list.length){
+box.innerHTML='<div class="card"><h3>No favourites yet ❤️</h3><p class="muted">Tap 🤍 on a service to add it.</p></div>';
+return;
+}
+
+box.innerHTML=list.map(s=>`
+<div class="card">
+<h3>${s[2]} ${s[0]}</h3>
+<p>${s[3]}</p>
+<p class="price">${s[4]}</p>
+<button class="primary" onclick="book('${s[0]}')">Book</button>
+</div>`).join("");
+}
+
+function navigation(){
+const old=document.querySelector(".nav");
+if(old)old.remove();
+
+const nav=document.createElement("div");
+nav.className="nav";
+nav.innerHTML=`
+<button data-page="home" onclick="go('home')"><span>🏠</span><small>Home</small></button>
+<button data-page="find" onclick="go('find')"><span>🔎</span><small>Find</small></button>
+<button data-page="bookings" onclick="go('bookings')"><span>📋</span><small>Bookings</small></button>
+<button data-page="wallet" onclick="go('wallet')"><span>💰</span><small>Wallet</small></button>
+<button data-page="profileView" onclick="go('profileView')"><span>👤</span><small>Profile</small></button>`;
+
+document.body.appendChild(nav);
+
+document.querySelectorAll(".nav button").forEach(btn=>{
+btn.addEventListener("click",()=>{
+document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));
+btn.classList.add("active");
+});
+});
+}
+
+setup();
+navigation();
+loadSavedProfile();
+
+if(localStorage.getItem("partnerLoggedIn")==="true"){
+    go("home");
+}else{
+    go("loginForm");
+}
+loadSavedProfile();
+</script>
+
+<script>
+function sendOTP(){
+    const mobile=document.getElementById("loginMobile").value.trim();
+
+    if(!/^[0-9]{10}$/.test(mobile)){
+        alert("Please enter a valid 10 digit mobile number.");
+        return;
+    }
+
+    const otp=Math.floor(100000+Math.random()*900000).toString();
+
+    localStorage.setItem("partnerMobile",mobile);
+    localStorage.setItem("partnerOTP",otp);
+
+    document.getElementById("demoOTP").textContent=otp;
+    document.getElementById("otpBox").style.display="block";
+
+    alert("Demo OTP generated. Use the OTP shown on screen.");
+}
+
+function verifyOTP(){
+    const entered=document.getElementById("loginOTP").value.trim();
+    const correct=localStorage.getItem("partnerOTP");
+
+    if(entered!==correct){
+        alert("Incorrect OTP.");
+        return;
+    }
+
+    localStorage.setItem("partnerLoggedIn","true");
+    go("profile");
+}
+loadSavedProfile();
+</script>
+</body>
+</html>
