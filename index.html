@@ -138,6 +138,7 @@ color:#291a21;
 color:#806c74!important;
 }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -164,11 +165,11 @@ color:#806c74!important;
 <div class="card">
 <h2>Login / Sign Up</h2>
 <p class="muted">Enter your mobile number to continue.</p>
-<input id="loginMobile" type="tel" maxlength="10" placeholder="10-digit mobile number">
+<input id="loginEmail" type="email" placeholder="Enter your email address" autocomplete="email">
 <button class="primary" style="width:100%" onclick="sendOTP()">Send OTP</button>
 <div id="otpBox" style="display:none;margin-top:12px;">
 <input id="loginOTP" maxlength="6" placeholder="Enter OTP">
-<p class="muted">Demo OTP: <b id="demoOTP"></b></p>
+<p class="muted">Enter the 6-digit OTP sent to your email</p>
 <button class="primary" style="width:100%" onclick="verifyOTP()">Verify OTP</button>
 </div>
 </div>
@@ -444,10 +445,13 @@ if(id==="favourites")renderFavourites();
 if(id==="wallet")renderWallet();
 }
 
-function logout(){
-    localStorage.removeItem("partnerLoggedIn");
-    localStorage.removeItem("partnerOTP");
-    go("loginForm");
+async function logout(){
+    try{
+        await PartnerFlowDB.logout();
+    }catch(error){
+        console.error("Logout error:",error);
+        alert("Logout failed: "+error.message);
+    }
 }
 
 function loadSavedProfile(){
@@ -483,7 +487,7 @@ if(document.getElementById("plang")) document.getElementById("plang").textConten
 if(document.getElementById("pabout")) document.getElementById("pabout").textContent=about||"No description added.";
 }
 
-function saveProfile(){
+async function saveProfile(){
 const n=document.getElementById("name").value.trim();
 const c=document.getElementById("city").value.trim();
 
@@ -492,20 +496,35 @@ alert("Please enter your name and city.");
 return;
 }
 
+const profile={
+name:n,
+city:c,
+age:document.getElementById("age").value,
+language:document.getElementById("language").value,
+about:document.getElementById("about").value
+};
+
+try{
+await PartnerFlowDB.saveProfile(profile);
+
 localStorage.setItem("partnerName",n);
 localStorage.setItem("partnerCity",c);
-localStorage.setItem("partnerAge",document.getElementById("age").value);
-localStorage.setItem("partnerLanguage",document.getElementById("language").value);
-localStorage.setItem("partnerAbout",document.getElementById("about").value);
+localStorage.setItem("partnerAge",profile.age);
+localStorage.setItem("partnerLanguage",profile.language);
+localStorage.setItem("partnerAbout",profile.about);
 
 document.getElementById("welcome").textContent=n;
 document.getElementById("pname").textContent=n;
 document.getElementById("pcity").textContent=c;
-document.getElementById("page").textContent=document.getElementById("age").value||"Not added";
-document.getElementById("plang").textContent=document.getElementById("language").value||"Not added";
-document.getElementById("pabout").textContent=document.getElementById("about").value||"No description added.";
+document.getElementById("page").textContent=profile.age||"Not added";
+document.getElementById("plang").textContent=profile.language||"Not added";
+document.getElementById("pabout").textContent=profile.about||"No description added.";
 
 go("home");
+}catch(error){
+console.error(error);
+alert("Profile save failed: "+error.message);
+}
 }
 
 function setup(){
@@ -609,7 +628,7 @@ ${fav?"❤️ Remove Favourite":"🤍 Add Favourite"}
 go("details");
 }
 
-function book(name){
+async function book(name){
 const s=services.find(x=>x[0]===name);
 if(!s)return;
 
@@ -653,8 +672,20 @@ if(!confirm(
 "💰 "+s[4]
 ))return;
 
+const priceNumber=Number(String(s[4]).replace(/[^0-9.]/g,""));
+
+try{
+const savedBooking=await PartnerFlowDB.createBooking({
+partner_name:name,
+service_name:s[0],
+price:priceNumber,
+booking_date:year+"-"+String(month).padStart(2,"0")+"-"+String(day).padStart(2,"0"),
+booking_time:time,
+status:"Upcoming"
+});
+
 bookings.push({
-id:bookingId,
+id:savedBooking.id||bookingId,
 name:name,
 price:s[4],
 date:date,
@@ -665,78 +696,49 @@ createdAt:new Date().toISOString()
 
 localStorage.setItem("partnerBookings",JSON.stringify(bookings));
 
-alert("Booking confirmed! 🎉\\nBooking ID: "+bookingId);
+alert("Booking confirmed! 🎉\\nBooking ID: "+(savedBooking.id||bookingId));
 go("bookings");
+}catch(error){
+console.error(error);
+alert("Booking failed: "+error.message);
+}
 }
 
 function renderBookings(){
 const box=document.getElementById("bookingList");
 
 if(!bookings.length){
-box.innerHTML='<div class="card"><h3>No bookings yet</h3><p class="muted">Your bookings will appear here.</p></div>';
-return;
+    box.innerHTML='<div class="card"><h3>No bookings yet</h3><p class="muted">Your bookings will appear here.</p></div>';
+    return;
 }
 
 box.innerHTML=bookings.map((b,i)=>`
 <div class="card">
 <div class="row">
-<h3>${b.name}</h3>
-<span class="badge">${b.status==="Cancelled"?"🔴 Cancelled":"🟢 Upcoming"}</span>
+<h3>${b.name||"Partner Flow"}</h3>
+<span class="badge">
+${b.status==="Cancelled"?"🔴 Cancelled":"🟢 Upcoming"}
+</span>
 </div>
 
-<p class="muted">Booking ID: <strong>${b.id||"PF"+i}</strong></p>
-<p>📅 ${b.date}</p>
+<p class="muted">
+Booking ID: <strong>${b.id||"PF"+i}</strong>
+</p>
+
+${b.serviceName
+?`<p>🛎️ Service: ${b.serviceName}</p>`
+:""}
+
+<p>📅 ${b.date||"Date not added"}</p>
 <p>🕐 ${b.time||"Time not added"}</p>
-<p class="price">${b.price}</p>
+<p class="price">${b.price||"₹0"}</p>
 
 ${b.status==="Cancelled"
-?'<p class="muted">This booking was cancelled and the refund was added to your wallet.</p>'
+?'<p class="muted">This booking was cancelled and the refund was added to your wallet history.</p>'
 :'<button class="secondary" onclick="cancelBooking('+i+')">Cancel Booking</button>'}
 
-</div>`).join("");
-}
-
-function cancelBooking(i){
-const b=bookings[i];
-
-if(!b || b.status==="Cancelled")return;
-
-if(!confirm("Cancel this booking?"))return;
-
-bookings[i].status="Cancelled";
-
-const amount=Number(String(b.price).replace(/[^0-9.]/g,""));
-
-if(amount>0){
-let balance=Number(localStorage.getItem("partnerWalletBalance")||0);
-balance+=amount;
-localStorage.setItem("partnerWalletBalance",String(balance));
-
-let transactions=JSON.parse(localStorage.getItem("partnerTransactions")||"[]");
-
-transactions.unshift({
-type:"Refund",
-amount:amount,
-date:new Date().toLocaleString("en-IN")
-});
-
-localStorage.setItem("partnerTransactions",JSON.stringify(transactions));
-}
-
-localStorage.setItem("partnerBookings",JSON.stringify(bookings));
-
-renderBookings();
-alert("Booking cancelled and ₹"+amount.toLocaleString("en-IN")+" refunded to your wallet. 💰");
-}
-
-function fav(name){
-if(favourites.includes(name))
-favourites=favourites.filter(x=>x!==name);
-else
-favourites.push(name);
-
-localStorage.setItem("partnerFavourites",JSON.stringify(favourites));
-render();
+</div>
+`).join("");
 }
 
 function renderFavourites(){
@@ -793,38 +795,417 @@ loadSavedProfile();
 </script>
 
 <script>
-function sendOTP(){
-    const mobile=document.getElementById("loginMobile").value.trim();
 
-    if(!/^[0-9]{10}$/.test(mobile)){
-        alert("Please enter a valid 10 digit mobile number.");
+async function sendOTP(){
+    const email = document.getElementById("loginEmail").value.trim();
+
+    if(!email || !email.includes("@")){
+        alert("Please enter a valid email address.");
         return;
     }
 
-    const otp=Math.floor(100000+Math.random()*900000).toString();
+    try{
+        const { error } = await supabaseClient.auth.signInWithOtp({
+            email: email,
+            options: {
+                shouldCreateUser: true
+            }
+        });
 
-    localStorage.setItem("partnerMobile",mobile);
-    localStorage.setItem("partnerOTP",otp);
+        if(error) throw error;
 
-    document.getElementById("demoOTP").textContent=otp;
-    document.getElementById("otpBox").style.display="block";
+        localStorage.setItem("partnerLoginEmail", email);
 
-    alert("Demo OTP generated. Use the OTP shown on screen.");
+        document.getElementById("otpBox").style.display = "block";
+
+        alert("OTP sent to your email.");
+    }catch(error){
+        console.error(error);
+        alert("Unable to send OTP: " + error.message);
+    }
 }
 
-function verifyOTP(){
-    const entered=document.getElementById("loginOTP").value.trim();
-    const correct=localStorage.getItem("partnerOTP");
+async function verifyOTP(){
+    const email = localStorage.getItem("partnerLoginEmail") ||
+                  document.getElementById("loginEmail").value.trim();
 
-    if(entered!==correct){
-        alert("Incorrect OTP.");
+    const entered = document.getElementById("loginOTP").value.trim();
+
+    if(!email || !entered){
+        alert("Please enter your email and OTP.");
         return;
     }
 
-    localStorage.setItem("partnerLoggedIn","true");
-    go("profile");
+    if(entered.length !== 6){
+        alert("Please enter the 6-digit OTP.");
+        return;
+    }
+
+    try{
+        const { data, error } = await supabaseClient.auth.verifyOtp({
+            email: email,
+            token: entered,
+            type: "email"
+        });
+
+        if(error) throw error;
+
+        localStorage.setItem("partnerLoggedIn", "true");
+        localStorage.setItem("partnerLoginEmail", email);
+
+        alert("✅ Login successful!");
+
+        go("home");
+    }catch(error){
+        console.error(error);
+        alert("Incorrect or expired OTP.");
+    }
 }
-loadSavedProfile();
+
+async function restoreSupabaseSession(){
+    try{
+        const { data } = await supabaseClient.auth.getSession();
+
+        if(data && data.session){
+            localStorage.setItem("partnerLoggedIn", "true");
+            localStorage.setItem(
+                "partnerLoginEmail",
+                data.session.user.email || ""
+            );
+        }
+    }catch(error){
+        console.error("Session restore error:", error);
+    }
+}
+
+restoreSupabaseSession();
+
 </script>
+<script>
+const SUPABASE_URL = "https://gtetlaezivgpoeotolci.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_cJmJquQWbucubgBdG1a8lw_YSfsHUKn";
+const supabaseClient = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_PUBLISHABLE_KEY
+);
+</script>
+
+
+
+
+<script>
+/* ===== PARTNER FLOW — SUPABASE BACKEND BRIDGE ===== */
+
+window.PartnerFlowDB = {
+
+  async user() {
+    const { data, error } = await supabaseClient.auth.getUser();
+    if (error) throw error;
+    return data.user;
+  },
+
+  async saveProfile(profile) {
+    const user = await this.user();
+    if (!user) throw new Error("Please login first.");
+
+    const { data, error } = await supabaseClient
+      .from("profiles")
+      .upsert({
+        id: user.id,
+        name: profile.name || "",
+        city: profile.city || "",
+        age: profile.age ? Number(profile.age) : null,
+        language: profile.language || "",
+        about: profile.about || ""
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async getProfile() {
+    const user = await this.user();
+    if (!user) return null;
+
+    const { data, error } = await supabaseClient
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async createBooking(booking) {
+    const user = await this.user();
+    if (!user) throw new Error("Please login first.");
+
+    const { data, error } = await supabaseClient
+      .from("bookings")
+      .insert({
+        user_id: user.id,
+        partner_name: booking.partner_name || "",
+        service_name: booking.service_name || "",
+        price: Number(booking.price || 0),
+        booking_date: booking.booking_date,
+        booking_time: booking.booking_time || "",
+        status: booking.status || "Upcoming"
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async bookings() {
+    const user = await this.user();
+    if (!user) return [];
+
+    const { data, error } = await supabaseClient
+      .from("bookings")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  async addFavourite(partnerName) {
+    const user = await this.user();
+    if (!user) throw new Error("Please login first.");
+
+    const { data, error } = await supabaseClient
+      .from("favourites")
+      .insert({
+        user_id: user.id,
+        partner_name: partnerName
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async favourites() {
+    const user = await this.user();
+    if (!user) return [];
+
+    const { data, error } = await supabaseClient
+      .from("favourites")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  async walletTransaction(amount, type, description) {
+    const user = await this.user();
+    if (!user) throw new Error("Please login first.");
+
+    const { data, error } = await supabaseClient
+      .from("wallet_transactions")
+      .insert({
+        user_id: user.id,
+        amount: Number(amount || 0),
+        transaction_type: type || "transaction",
+        description: description || ""
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async wallet() {
+    const user = await this.user();
+    if (!user) return [];
+
+    const { data, error } = await supabaseClient
+      .from("wallet_transactions")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  async logout() {
+    const { error } = await supabaseClient.auth.signOut();
+    if (error) throw error;
+
+    localStorage.removeItem("partnerLoggedIn");
+    localStorage.removeItem("partnerLoginEmail");
+    localStorage.removeItem("partnerOTP");
+
+    location.reload();
+  }
+};
+
+console.log("Partner Flow Backend Bridge Ready");
+</script>
+
+
+<script>
+/* ===== PARTNER FLOW — DATABASE SYNC ===== */
+
+async function syncProfileFromSupabase(){
+    try{
+        const profile=await PartnerFlowDB.getProfile();
+        if(!profile) return;
+
+        if(profile.name) localStorage.setItem("partnerName",profile.name);
+        if(profile.city) localStorage.setItem("partnerCity",profile.city);
+        if(profile.age!=null) localStorage.setItem("partnerAge",profile.age);
+        if(profile.language) localStorage.setItem("partnerLanguage",profile.language);
+        if(profile.about) localStorage.setItem("partnerAbout",profile.about);
+
+        if(typeof loadSavedProfile==="function"){
+            loadSavedProfile();
+        }
+    }catch(error){
+        console.error("Profile sync:",error);
+    }
+}
+
+async function syncBookingsFromSupabase(){
+    try{
+        const rows=await PartnerFlowDB.bookings();
+
+        bookings=rows.map(b=>({
+            id:b.id,
+            name:b.partner_name||"",
+            serviceName:b.service_name||"",
+            price:"₹"+Number(b.price||0).toLocaleString("en-IN"),
+            date:b.booking_date||"",
+            time:b.booking_time||"",
+            status:b.status||"Upcoming",
+            createdAt:b.created_at||""
+        }));
+
+        localStorage.setItem("partnerBookings",JSON.stringify(bookings));
+
+        if(typeof renderBookings==="function"){
+            renderBookings();
+        }
+    }catch(error){
+        console.error("Booking sync:",error);
+    }
+}
+
+async function syncFavouritesFromSupabase(){
+    try{
+        const rows=await PartnerFlowDB.favourites();
+
+        favourites=rows
+            .map(x=>x.partner_name)
+            .filter(Boolean);
+
+        localStorage.setItem(
+            "partnerFavourites",
+            JSON.stringify(favourites)
+        );
+
+        if(typeof render==="function"){
+            render();
+        }
+    }catch(error){
+        console.error("Favourite sync:",error);
+    }
+}
+
+async function syncWalletFromSupabase(){
+    try{
+        const rows=await PartnerFlowDB.wallet();
+
+        let balance=0;
+
+        rows.forEach(t=>{
+            const amount=Number(t.amount||0);
+
+            if(
+                t.transaction_type==="credit" ||
+                t.transaction_type==="refund"
+            ){
+                balance+=amount;
+            }else if(
+                t.transaction_type==="debit" ||
+                t.transaction_type==="payment"
+            ){
+                balance-=amount;
+            }
+        });
+
+        localStorage.setItem(
+            "partnerWalletBalance",
+            String(Math.max(0,balance))
+        );
+
+        localStorage.setItem(
+            "partnerWalletTransactions",
+            JSON.stringify(rows)
+        );
+    }catch(error){
+        console.error("Wallet sync:",error);
+    }
+}
+
+async function syncPartnerFlowData(){
+    try{
+        const user=await PartnerFlowDB.user();
+
+        if(!user) return;
+
+        await Promise.all([
+            syncProfileFromSupabase(),
+            syncBookingsFromSupabase(),
+            syncFavouritesFromSupabase(),
+            syncWalletFromSupabase()
+        ]);
+
+        console.log("Partner Flow data synced");
+    }catch(error){
+        console.error("Data sync failed:",error);
+    }
+}
+
+setTimeout(syncPartnerFlowData,500);
+</script>
+
+
+<script>
+async function renderWalletFromDatabase(){
+    try{
+        await syncWalletFromSupabase();
+
+        const balance=Number(
+            localStorage.getItem("partnerWalletBalance")||0
+        );
+
+        const balanceElements=[
+            document.getElementById("walletBalance"),
+            document.getElementById("balance")
+        ].filter(Boolean);
+
+        balanceElements.forEach(el=>{
+            el.textContent="₹"+balance.toLocaleString("en-IN");
+        });
+
+        console.log("Wallet balance synced:",balance);
+    }catch(error){
+        console.error("Wallet screen sync:",error);
+    }
+}
+</script>
+
 </body>
 </html>
