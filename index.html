@@ -862,6 +862,31 @@ async function verifyOTP(){
     }
 }
 
+
+async function requireSupabaseUser(){
+    try{
+        const {data,error}=await supabaseClient.auth.getSession();
+
+        if(error) throw error;
+
+        if(!data || !data.session){
+            localStorage.removeItem("partnerLoggedIn");
+            return null;
+        }
+
+        localStorage.setItem("partnerLoggedIn","true");
+        localStorage.setItem(
+            "partnerLoginEmail",
+            data.session.user.email || ""
+        );
+
+        return data.session.user;
+    }catch(error){
+        console.error("Auth check error:",error);
+        return null;
+    }
+}
+
 async function restoreSupabaseSession(){
     try{
         const { data } = await supabaseClient.auth.getSession();
