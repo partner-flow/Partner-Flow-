@@ -434,10 +434,36 @@ box.innerHTML=transactions.map(t=>`
 </div>`).join("");
 }
 
-function go(id){
+async function go(id){
+
+const publicScreens=["loginForm"];
+
+if(!publicScreens.includes(id)){
+    try{
+        const {data,error}=await supabaseClient.auth.getSession();
+
+        if(error) throw error;
+
+        if(!data || !data.session){
+            localStorage.removeItem("partnerLoggedIn");
+            localStorage.removeItem("partnerLoginEmail");
+
+            alert("Please login first.");
+            id="login";
+        }
+    }catch(error){
+        console.error("Navigation auth check:",error);
+        alert("Please login first.");
+        id="login";
+    }
+}
+
 document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+
 const el=document.getElementById(id);
+
 if(el)el.classList.add("active");
+
 if(id==="home")home();
 if(id==="find")render();
 if(id==="bookings")renderBookings();
@@ -797,7 +823,7 @@ loadSavedProfile();
 <script>
 
 async function sendOTP(){
-    const email = document.getElementById("loginEmail").value.trim();
+    const email=document.getElementById("loginEmail").value.trim();
 
     if(!email || !email.includes("@")){
         alert("Please enter a valid email address.");
@@ -805,85 +831,86 @@ async function sendOTP(){
     }
 
     try{
-        const { error } = await supabaseClient.auth.signInWithOtp({
-            email: email,
-            options: {
-                shouldCreateUser: true
+        const {error}=await supabaseClient.auth.signInWithOtp({
+            email:email,
+            options:{
+                shouldCreateUser:true
             }
         });
 
         if(error) throw error;
 
-        localStorage.setItem("partnerLoginEmail", email);
+        localStorage.setItem("partnerLoginEmail",email);
 
-        document.getElementById("otpBox").style.display = "block";
+        const box=document.getElementById("otpBox");
+        if(box) box.style.display="block";
 
-        alert("OTP sent to your email.");
+        alert("Login code sent to your email.");
     }catch(error){
-        console.error(error);
-        alert("Unable to send OTP: " + error.message);
+        console.error("OTP send error:",error);
+        alert("Unable to send login code: "+error.message);
     }
 }
 
 async function verifyOTP(){
-    const email = localStorage.getItem("partnerLoginEmail") ||
-                  document.getElementById("loginEmail").value.trim();
+    const email=
+        localStorage.getItem("partnerLoginEmail") ||
+        document.getElementById("loginEmail").value.trim();
 
-    const entered = document.getElementById("loginOTP").value.trim();
+    const entered=
+        document.getElementById("loginOTP").value.trim();
 
     if(!email || !entered){
         alert("Please enter your email and OTP.");
         return;
     }
 
-    if(entered.length !== 6){
+    if(entered.length !== 6 || isNaN(Number(entered))){
         alert("Please enter the 6-digit OTP.");
         return;
     }
 
     try{
-        const { data, error } = await supabaseClient.auth.verifyOtp({
-            email: email,
-            token: entered,
-            type: "email"
+        const {data,error}=await supabaseClient.auth.verifyOtp({
+            email:email,
+            token:entered,
+            type:"email"
         });
 
         if(error) throw error;
 
-        localStorage.setItem("partnerLoggedIn", "true");
-        localStorage.setItem("partnerLoginEmail", email);
-
-        alert("✅ Login successful!");
-
-        go("home");
-    }catch(error){
-        console.error(error);
-        alert("Incorrect or expired OTP.");
-    }
-}
-
-
-async function requireSupabaseUser(){
-    try{
-        const {data,error}=await supabaseClient.auth.getSession();
-
-        if(error) throw error;
-
         if(!data || !data.session){
-            localStorage.removeItem("partnerLoggedIn");
-            return null;
+            throw new Error("Supabase session was not created.");
         }
 
         localStorage.setItem("partnerLoggedIn","true");
-        localStorage.setItem(
-            "partnerLoginEmail",
-            data.session.user.email || ""
-        );
+        localStorage.setItem("partnerLoginEmail",email);
 
-        return data.session.user;
+        alert("Login successful!");
+
+        const profile=await PartnerFlowDB.getProfile();
+
+        if(profile){
+            localStorage.setItem("partnerName",profile.name||"");
+            localStorage.setItem("partnerCity",profile.city||"");
+            localStorage.setItem("partnerAge",profile.age||"");
+            localStorage.setItem("partnerLanguage",profile.language||"");
+            localStorage.setItem("partnerAbout",profile.about||"");
+
+            if(typeof loadSavedProfile==="function"){
+                loadSavedProfile();
+            }
+
+            go("home");
+        }else{
+            go("profile");
+        }
+
+        setTimeout(syncPartnerFlowData,300);
+
     }catch(error){
-        console.error("Auth check error:",error);
-        return null;
+        console.error("OTP verify error:",error);
+        alert("Incorrect or expired OTP.");
     }
 }
 
