@@ -472,7 +472,12 @@ if(id==="home")home();
 if(id==="find")render();
 if(id==="bookings")renderBookings();
 if(id==="favourites")renderFavourites();
-if(id==="wallet")renderWallet();
+if(id==="wallet"){
+    renderWallet();
+    if(typeof renderWalletFromDatabase==="function"){
+        renderWalletFromDatabase();
+    }
+}
 }
 
 async function logout(){
@@ -702,7 +707,11 @@ if(!confirm(
 "💰 "+s[4]
 ))return;
 
-const priceNumber=Number(String(s[4]).replace(/[^0-9.]/g,""));
+const priceNumber=Number(
+    String(s[4])
+        .split("/")[0]
+        .replace(/[^0-9.]/g,"")
+);
 
 try{
 const savedBooking=await PartnerFlowDB.createBooking({
@@ -732,6 +741,112 @@ go("bookings");
 console.error(error);
 alert("Booking failed: "+error.message);
 }
+}
+
+
+async function fav(name){
+    const index=favourites.indexOf(name);
+
+    try{
+        const user=await PartnerFlowDB.user();
+
+        if(!user){
+            alert("Please login first.");
+            return;
+        }
+
+        if(index===-1){
+            await PartnerFlowDB.addFavourite(name);
+            favourites.push(name);
+        }else{
+            const rows=await PartnerFlowDB.favourites();
+            const row=rows.find(x=>x.partner_name===name);
+
+            if(row){
+                const {error}=await supabaseClient
+                    .from("favourites")
+                    .delete()
+                    .eq("id",row.id)
+                    .eq("user_id",user.id);
+
+                if(error) throw error;
+            }
+
+            favourites.splice(index,1);
+        }
+
+        localStorage.setItem(
+            "partnerFavourites",
+            JSON.stringify(favourites)
+        );
+
+        render();
+
+    }catch(error){
+        console.error("Favourite update failed:",error);
+        alert("Favourite update failed: "+error.message);
+    }
+}
+
+async function cancelBooking(i){
+    const b=bookings[i];
+
+    if(!b || b.status==="Cancelled") return;
+
+    if(!confirm("Cancel this booking?")) return;
+
+    try{
+        const user=await PartnerFlowDB.user();
+
+        if(!user){
+            alert("Please login first.");
+            return;
+        }
+
+        const amount=Number(
+            String(b.price||"")
+                .split("/")[0]
+                .replace(/[^0-9.]/g,"")
+        );
+
+        if(b.id && b.id.length>20){
+            const {error}=await supabaseClient
+                .from("bookings")
+                .update({status:"Cancelled"})
+                .eq("id",b.id)
+                .eq("user_id",user.id);
+
+            if(error) throw error;
+        }
+
+        if(amount>0){
+            await PartnerFlowDB.walletTransaction(
+                amount,
+                "refund",
+                "Refund for cancelled booking: "+(b.name||"Partner Flow booking")
+            );
+        }
+
+        bookings[i].status="Cancelled";
+
+        localStorage.setItem(
+            "partnerBookings",
+            JSON.stringify(bookings)
+        );
+
+        await syncWalletFromSupabase();
+
+        renderBookings();
+
+        alert(
+            "Booking cancelled successfully.\n"+
+            "Refund added to wallet history. 💰"
+        );
+
+    }catch(error){
+        console.error("Cancellation error:",error);
+        alert("Cancellation failed: "+error.message);
+    }
 }
 
 function renderBookings(){
@@ -839,7 +954,7 @@ async function sendOTP(){
             email:email,
             options:{
                 shouldCreateUser:true,
-                emailRedirectTo:window.location.origin
+                emailRedirectTo:window.location.origin + window.location.pathname
             }
         });
 
@@ -1085,7 +1200,9 @@ async function syncBookingsFromSupabase(){
             name:b.partner_name||"",
             serviceName:b.service_name||"",
             price:"₹"+Number(b.price||0).toLocaleString("en-IN"),
-            date:b.booking_date||"",
+            date:b.booking_date
+    ? b.booking_date.split("-").reverse().join("/")
+    : "",
             time:b.booking_time||"",
             status:b.status||"Upcoming",
             createdAt:b.created_at||""
