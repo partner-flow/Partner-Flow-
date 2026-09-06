@@ -168,9 +168,13 @@ color:#806c74!important;
 <input id="loginEmail" type="email" placeholder="Enter your email address" autocomplete="email">
 <button class="primary" style="width:100%" onclick="sendOTP()">Send OTP</button>
 <div id="otpBox" style="display:none;margin-top:12px;">
-<input id="loginOTP" maxlength="6" placeholder="Enter OTP">
-<p class="muted">Enter the 6-digit OTP sent to your email</p>
-<button class="primary" style="width:100%" onclick="verifyOTP()">Verify OTP</button>
+<p class="muted">
+We sent a secure login link to your email.
+Open the email and tap the link to continue.
+</p>
+<button class="secondary" style="width:100%" onclick="sendOTP()">
+Resend Login Link
+</button>
 </div>
 </div>
 </div>
@@ -834,7 +838,8 @@ async function sendOTP(){
         const {error}=await supabaseClient.auth.signInWithOtp({
             email:email,
             options:{
-                shouldCreateUser:true
+                shouldCreateUser:true,
+                emailRedirectTo:window.location.origin
             }
         });
 
@@ -845,73 +850,15 @@ async function sendOTP(){
         const box=document.getElementById("otpBox");
         if(box) box.style.display="block";
 
-        alert("Login code sent to your email.");
+        alert("Login link sent to your email. Open it to continue.");
     }catch(error){
-        console.error("OTP send error:",error);
-        alert("Unable to send login code: "+error.message);
+        console.error("Login link error:",error);
+        alert("Unable to send login link: "+error.message);
     }
 }
 
 async function verifyOTP(){
-    const email=
-        localStorage.getItem("partnerLoginEmail") ||
-        document.getElementById("loginEmail").value.trim();
-
-    const entered=
-        document.getElementById("loginOTP").value.trim();
-
-    if(!email || !entered){
-        alert("Please enter your email and OTP.");
-        return;
-    }
-
-    if(entered.length !== 6 || isNaN(Number(entered))){
-        alert("Please enter the 6-digit OTP.");
-        return;
-    }
-
-    try{
-        const {data,error}=await supabaseClient.auth.verifyOtp({
-            email:email,
-            token:entered,
-            type:"email"
-        });
-
-        if(error) throw error;
-
-        if(!data || !data.session){
-            throw new Error("Supabase session was not created.");
-        }
-
-        localStorage.setItem("partnerLoggedIn","true");
-        localStorage.setItem("partnerLoginEmail",email);
-
-        alert("Login successful!");
-
-        const profile=await PartnerFlowDB.getProfile();
-
-        if(profile){
-            localStorage.setItem("partnerName",profile.name||"");
-            localStorage.setItem("partnerCity",profile.city||"");
-            localStorage.setItem("partnerAge",profile.age||"");
-            localStorage.setItem("partnerLanguage",profile.language||"");
-            localStorage.setItem("partnerAbout",profile.about||"");
-
-            if(typeof loadSavedProfile==="function"){
-                loadSavedProfile();
-            }
-
-            go("home");
-        }else{
-            go("profile");
-        }
-
-        setTimeout(syncPartnerFlowData,300);
-
-    }catch(error){
-        console.error("OTP verify error:",error);
-        alert("Incorrect or expired OTP.");
-    }
+    return;
 }
 
 async function restoreSupabaseSession(){
